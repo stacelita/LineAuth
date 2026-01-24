@@ -31,7 +31,7 @@ export default {
     );
 
     if (!isValid) {
-      return new Response("Invalid Signature", { status: 401 });
+      return new Response("Invalid Signature", { status: 403 });
     }
 
     // 3. 検証に成功したらGASへ転送
