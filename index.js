@@ -34,6 +34,15 @@ export default {
       return new Response("Invalid Signature", { status: 401 });
     }
 
-    return new Response("OK", { status: 200 });
+    // 3. 検証に成功したらGASへ転送
+    // GAS側で「Workersから来た」と判別するための秘密鍵をヘッダーに添える
+    return await fetch(env.GAS_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Custom-Auth": env.PROXY_SECRET // GAS側でこれをチェック
+      },
+      body: bodyText
+    });
   }
 };
