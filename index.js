@@ -34,6 +34,6 @@ export default {
       return new Response("Invalid Signature", { status: 401 });
     }
 
-    return;
+    return new Response("OK", { status: 200 });
   }
 };
