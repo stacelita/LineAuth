@@ -36,26 +36,13 @@ export default {
 
     // 3. 検証に成功したらGASへ転送
     // GAS側で「Workersから来た」と判別するための秘密鍵をヘッダーに添える
-    const gasResponse = await fetch(env.GAS_URL, {
+    return await fetch(env.GAS_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Custom-Auth": env.PROXY_SECRET
+        "X-Custom-Auth": env.PROXY_SECRET // GAS側でこれをチェック
       },
-      body: bodyText,
-      redirect: "follow" // GASのリダイレクトをWorkers内部で追いかける
-    });
-
-    // 4. GASの結果を取得
-    const gasResult = await gasResponse.text();
-
-    // 5. クライアント(JS)に結果を返す（CORSヘッダーを付与）
-    return new Response(gasResult, {
-      status: gasResponse.status,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*", // 必要に応じて特定のドメインに制限
-      },
+      body: bodyText
     });
   }
 };
