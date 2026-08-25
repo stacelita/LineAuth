@@ -1,5 +1,6 @@
 export default {
   async fetch(request, env) {
+    console.log("GAS_URL:", env.GAS_URL); 
     if (request.method !== "POST") {
       return new Response("Method Not Allowed", { status: 405 });
     }
