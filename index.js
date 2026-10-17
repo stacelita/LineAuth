@@ -14,28 +14,35 @@ export default {
     }
 
     // 2. 署名検証 (HMAC-SHA256)
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      encoder.encode(env.CHANNEL_SECRET),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["verify"]
-    );
+    //    登録済みのチャネルシークレットのどれかで一致すれば、いずれかの公式アカウントからの正しいリクエスト
+    //    CHANNEL_SECRETS：カンマ区切りで複数指定（部署＝公式アカウントが増えたら書き足す）
+    //    CHANNEL_SECRET ：1つだけの従来の設定（そのままでも動くように残す）
+    const secrets = [env.CHANNEL_SECRET, ...(env.CHANNEL_SECRETS || "").split(",")]
+      .map(s => (s || "").trim())
+      .filter(s => s);
 
+    const encoder = new TextEncoder();
     const sigBinary = Uint8Array.from(atob(signature), c => c.charCodeAt(0));
-    const isValid = await crypto.subtle.verify(
-      "HMAC",
-      key,
-      sigBinary,
-      encoder.encode(bodyText)
-    );
+    let isValid = false;
+    for (const secret of secrets) {
+      const key = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(secret),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["verify"]
+      );
+      if (await crypto.subtle.verify("HMAC", key, sigBinary, encoder.encode(bodyText))) {
+        isValid = true;
+        break;
+      }
+    }
 
     if (!isValid) {
       return new Response("Invalid Signature", { status: 403 });
     }
 
-    // 3. 検証に成功したらGASへ転送
+    // 3. 検証に成功したらGASへ転送（どの部署宛てかは GAS 側で destination を見て判別する）
     // GAS側で「Workersから来た」と判別するための秘密鍵をヘッダーに添える
     return await fetch(env.GAS_URL, {
       method: "POST",
