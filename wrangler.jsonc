@@ -1,5 +1,6 @@
 {
   "name": "lineauth-shared",
   "main": "index.js",
-  "compatibility_date": "2026-01-24"
+  "compatibility_date": "2026-01-24",
+  "workers_dev": true
 }
