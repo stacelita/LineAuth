@@ -2,5 +2,8 @@
   "name": "lineauth-shared",
   "main": "index.js",
   "compatibility_date": "2026-01-24",
-  "workers_dev": true
+  // Cloudflare のダッシュボードでログ（console.error など）を確認できるようにする
+  "observability": {
+    "enabled": true
+  }
 }
