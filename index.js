@@ -1,6 +1,5 @@
 export default {
   async fetch(request, env) {
-    console.log("GAS_URL:", env.GAS_URL); 
     if (request.method !== "POST") {
       return new Response("Method Not Allowed", { status: 405 });
     }
@@ -21,8 +20,15 @@ export default {
       .map(s => (s || "").trim())
       .filter(s => s);
 
+    // 署名が Base64 として壊れている場合は、不正な署名として扱う
+    let sigBinary;
+    try {
+      sigBinary = Uint8Array.from(atob(signature), c => c.charCodeAt(0));
+    } catch {
+      return new Response("Invalid Signature", { status: 403 });
+    }
+
     const encoder = new TextEncoder();
-    const sigBinary = Uint8Array.from(atob(signature), c => c.charCodeAt(0));
     let isValid = false;
     for (const secret of secrets) {
       const key = await crypto.subtle.importKey(
@@ -43,12 +49,17 @@ export default {
     }
 
     // 3. 検証に成功したらGASへ転送（どの部署宛てかは GAS 側で destination を見て判別する）
-    // GAS側で「Workersから来た」と判別するための秘密鍵をヘッダーに添える
-    return await fetch(env.GAS_URL, {
+    //    GAS はリクエストヘッダーを読めないため、「Workerを通ってきた」ことを示す合言葉は URL のパラメータ key で渡す
+    //    （GAS 側のスクリプトプロパティ PROXY_SECRET と同じ値にする）
+    const gasUrl = new URL(env.GAS_URL);
+    if (env.PROXY_SECRET) {
+      gasUrl.searchParams.set("key", env.PROXY_SECRET);
+    }
+
+    return await fetch(gasUrl.toString(), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Custom-Auth": env.PROXY_SECRET // GAS側でこれをチェック
       },
       body: bodyText
     });
